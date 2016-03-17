@@ -226,8 +226,6 @@ void serialEvent1() {
   Serial1.readBytes(buffer, end);
   buffer[end] = '\0';
 
-  Serial.print(buffer);
-
   jsonRx += buffer;
   end = jsonRx.indexOf(ETX);
 
