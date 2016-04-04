@@ -53,6 +53,7 @@ const uint8_t redCross_icon [] PROGMEM = {
 };
 const iconInfo redCross = { redCross_icon, 16, COLOR888(255, 0, 0) };
 
+// See the comment inside 'const iconInfo *weatherIcons(uint16_t weatherId)'
 namespace weather {
   
   const uint8_t d01_icon [] PROGMEM = {

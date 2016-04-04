@@ -86,7 +86,7 @@ DisplayData curTime = {
 DisplayData curWeather = {
   "NO_WEATHER_YET",
   .scrolling = true,
-  .icon = &redCross,
+  .icon = NULL,
   .duration = 1
 };
 
@@ -99,6 +99,11 @@ DisplayData curTemperature = {
 
 const iconInfo *weatherIcons(uint16_t weatherId) {
   //Refer to http://openweathermap.org/weather-conditions
+
+  // Unfortunately no icon has been created yet; if you want to create them by yourself
+  // edit all the weather::dxx_icon matrixes (bitmap) and weather::dxx structures (width
+  // and color), then remove the following line
+  return NULL;
 
   switch (weatherId / 100) {
     case 2: //Thunderstorm
