@@ -47,7 +47,7 @@ RGBmatrixPanel matrix(A, B, C, CLK, LAT, OE, true, 2);
 const char celsiusDegrees[] = { ' ', DEGREES, 'C', '\0' };
 
 struct DisplayData {
-  char text[32];
+  char text[80];
   bool scrolling;
   const iconInfo *icon;
   uint8_t duration;   //If scrolling == true it is the number of passes, otherwise it is the number of ms / 100
@@ -70,7 +70,7 @@ const DisplayData facebook = {
 };
 
 DisplayData curDate = {
-  "NO_DATE_YET",
+  "No internet connection, please connect to IO_setup and configure the WiFi",
   .scrolling = true,
   .icon = NULL,
   .duration = 1
@@ -96,6 +96,17 @@ DisplayData curTemperature = {
   .icon = NULL,
   .duration = 60
 };
+
+const DisplayData *displayData[] = {
+  &welcome,
+  &facebook,
+  &curDate,
+  &curTime,
+  &curWeather,
+  &curTemperature
+};
+const uint8_t modesNum_real = sizeof(displayData) / sizeof(displayData[0]);
+uint8_t modesNum = 3;
 
 const iconInfo *weatherIcons(uint16_t weatherId) {
   //Refer to http://openweathermap.org/weather-conditions
@@ -157,16 +168,6 @@ void setup() {
 }
 
 void loop() {
-  static const DisplayData *displayData[] = {
-    &welcome,
-    &facebook,
-    &curDate,
-    &curTime,
-    &curWeather,
-    &curTemperature
-  };
-  static const uint8_t modesNum = sizeof(displayData) / sizeof(displayData[0]);
-
   static uint8_t i = 0;
   static uint16_t horiz = 0;
   static uint8_t scrollCount = 0;
@@ -275,6 +276,8 @@ void serialEvent1() {
           strcpy(curTemperature.text, tempStr);
           strcat(curTemperature.text, celsiusDegrees);
         }
+
+        modesNum = modesNum_real;
       }
       else {
         Serial.println("JSON parsing failed!");

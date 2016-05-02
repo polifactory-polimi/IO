@@ -23,6 +23,9 @@
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <WiFiManager.h>
 
 #include <ctime>
 #include <cstdio>
@@ -31,8 +34,8 @@
 #define OPENWEATHERMAP_APIKEY "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 #define TIMEZONEDB_APIKEY "XXXXXXXXXXXX"
 
-const char *ssid = "ssid_here";
-const char *password = "password_here";
+const char *ssid = "IO_setup";
+const char *password = "password of the setup network here";
 
 #define STX char(0x02)
 #define ETX char(0x03)
@@ -48,27 +51,12 @@ static const char wday_name[][4] = {
 static const char mon_name[][4] = {
   "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
-void wifi_connect() { 
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.print(ssid);
-
-  WiFi.begin(ssid, password);
-  
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");  
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-}
-
 void setup() {
+  WiFiManager wifiManager;
+
   Serial.begin(1200);
   delay(10);
+  wifiManager.autoConnect(ssid, password);
 }
 
 void loop() {
@@ -85,54 +73,57 @@ void loop() {
 
   char output[512];
 
-  if (WiFi.status() != WL_CONNECTED)
-    wifi_connect();
+  if (WiFi.status() == WL_CONNECTED) {
 
-  http.begin(weatherurl, 80, weatherpath);
+    http.begin(weatherurl, 80, weatherpath);
 
-  if (http.GET() == 200) {
-    json = http.getString();
-    JsonObject& root = jsonBuffer.parseObject(json);
+    if (http.GET() == 200) {
+      json = http.getString();
+      JsonObject& root = jsonBuffer.parseObject(json);
 
-    if (root.success()) {
-      weatherTx["weather"] = root["weather"];
-      weatherTx["main"] = root["main"];
+      if (root.success()) {
+        weatherTx["weather"] = root["weather"];
+        weatherTx["main"] = root["main"];
+      }
     }
-  }
 
-  http.begin(dateurl, 80, datepath);
+    http.begin(dateurl, 80, datepath);
 
-  if (http.GET() == 200) {
-    json = http.getString();
-    JsonObject& root = jsonBuffer.parseObject(json);
-    
-    if (root.success()) {     
-      time_t timestamp = root["timestamp"];
-      struct tm *timeptr = localtime(&timestamp);
+    if (http.GET() == 200) {
+      json = http.getString();
+      JsonObject& root = jsonBuffer.parseObject(json);
 
-      sprintf(date, "%s %d %s %d", wday_name[timeptr->tm_wday], timeptr->tm_mday, mon_name[timeptr->tm_mon], 1900 + timeptr->tm_year);
-      sprintf(time, "%02d:%02d", timeptr->tm_hour, timeptr->tm_min);
+      if (root.success()) {
+        time_t timestamp = root["timestamp"];
+        struct tm *timeptr = localtime(&timestamp);
 
-      dateTx["timestamp"] = timestamp;
-      dateTx["date"] = date;
-      dateTx["time"] = time;
+        sprintf(date, "%s %d %s %d", wday_name[timeptr->tm_wday], timeptr->tm_mday, mon_name[timeptr->tm_mon], 1900 + timeptr->tm_year);
+        sprintf(time, "%02d:%02d", timeptr->tm_hour, timeptr->tm_min);
+
+        dateTx["timestamp"] = timestamp;
+        dateTx["date"] = date;
+        dateTx["time"] = time;
+      }
     }
-  }
 
-  Serial.print(STX);
+    Serial.print(STX);
+
+    jsonTx.printTo(output, sizeof(output));
+    int len = strlen(output);
+
+    for (int i = 0; i < len; i++) {
+      Serial.print(output[i]);
   
-  jsonTx.printTo(output, sizeof(output));
-  int len = strlen(output);
+      if (i % 32 == 0)
+        delay(100);   //Don't fill the Arduino RX buffer!
+    }
 
-  for (int i = 0; i < len; i++) {
-    Serial.print(output[i]);
+    Serial.print(ETX);
 
-    if (i % 32 == 0)
-      delay(100);   //Don't fill the Arduino RX buffer!
+    delay(10000);
   }
-  
-  Serial.print(ETX);
+  else
+    delay(100);
 
-  delay(10000);
 }
 
